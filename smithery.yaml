@@ -1,8 +1,12 @@
 # Smithery.ai configuration
+kind: cli
+
 startCommand:
   type: stdio
   command: python
   args:
     - server.py
+  configSchema: {}
+
 build:
   dockerfile: Dockerfile
