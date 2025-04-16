@@ -1,4 +1,4 @@
 name: mcp-vm-server
 language: python
-entrypoint: python server.py
-dockerfile: Dockerfile 
+startCommand: python server.py
+dockerfile: Dockerfile
