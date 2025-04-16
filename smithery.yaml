@@ -2,7 +2,10 @@
 kind: cli
 
 startCommand:
-  commandFunction: ./start.py
+  type: stdio
+  command: python
+  args:
+    - server.py
   configSchema: {}
 
 build:
