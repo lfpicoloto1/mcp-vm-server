@@ -1,11 +1,7 @@
-# smithery.yaml
 kind: cli
 
 startCommand:
-  type: stdio
-  command: python
-  args:
-    - server.py
+  commandFunction: ./start.py
   configSchema: {}
 
 build:
