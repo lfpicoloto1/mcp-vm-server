@@ -1,4 +1,5 @@
-name: mcp-vm-server
-language: python
-startCommand: python server.py
-dockerfile: Dockerfile
+# Smithery.ai configuration
+startCommand:
+  type: stdio
+build:
+  dockerfile: Dockerfile
