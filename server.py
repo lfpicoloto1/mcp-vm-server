@@ -6,6 +6,12 @@ mcp = FastMCP("Virtual Machines MCP API", dependencies=["httpx"])
 
 API_BASE = "https://api.magalu.cloud/br-ne-1/compute/v1"
 
+
+# start.py
+def main(config):
+    import subprocess
+    subprocess.run(["python", "server.py"])
+
 # Resources (GET endpoints)
 @mcp.resource("vm://instances")
 async def list_instances(ctx: Context, _limit: int = 50, _offset: int = 0, _sort: str = "created_at:asc", expand: list[str] = None, x_tenant_id: str = None) -> dict:
