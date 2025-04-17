@@ -1,200 +1,118 @@
-from mcp.server.fastmcp import FastMCP, Context
-import httpx
-from mcp.server.fastmcp.prompts import base
-from typing import Optional, List
+# server.py
+from typing import Dict, Any, List, Optional
+from mcp.server.fastmcp import FastMCP
+import os
+import requests
+from pydantic import BaseModel
 
-# Inicialização do MCP
-mcp = FastMCP("Virtual Machines MCP API", dependencies=["httpx"])
+# Create an MCP server
+mcp = FastMCP("VM Manager")
 
-# Constantes
-API_BASE = "https://api.magalu.cloud/br-ne-1/compute/v1"
+# Define models based on the swagger specification
+class VM(BaseModel):
+    id: str
+    name: str
+    status: str
+    state: str
+    created_at: str
+    updated_at: str
+    flavor: Dict[str, Any]
+    image: Dict[str, Any]
+    networks: List[Dict[str, Any]]
 
-# Funções auxiliares
-async def make_request(
-    method: str,
-    endpoint: str,
-    params: Optional[dict] = None,
-    headers: Optional[dict] = None,
-    json: Optional[dict] = None
-) -> dict:
-    """Realiza uma requisição HTTP para a API."""
-    async with httpx.AsyncClient() as client:
-        url = f"{API_BASE}/{endpoint}"
-        response = await client.request(
-            method=method,
-            url=url,
-            params=params,
+class ListVMResponse(BaseModel):
+    vms: List[VM]
+    total: int
+    limit: int
+    offset: int
+
+# Configuration
+API_BASE_URL = os.getenv("VM_API_URL", "https://api.magalu.cloud/br-ne-1/compute")
+API_KEY = os.getenv("VM_API_KEY")
+if not API_KEY:
+    raise ValueError("VM_API_KEY environment variable is required")
+
+# Add VM listing tool
+@mcp.tool()
+def list_vms(
+    limit: Optional[int] = 50,
+    offset: Optional[int] = 0,
+    sort: Optional[str] = "created_at:asc",
+    expand: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    List all virtual machines in the current tenant.
+    
+    Args:
+        limit: Maximum number of results to return (default: 50)
+        offset: Number of results to skip (default: 0)
+        sort: Sort order (default: "created_at:asc")
+        expand: List of fields to expand in the response
+    
+    Returns:
+        Dict containing the list of VMs and pagination info
+    """
+    headers = {
+        "x-api-key": API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    params = {
+        "_limit": limit,
+        "_offset": offset,
+        "_sort": sort
+    }
+    
+    if expand:
+        params["expand"] = expand
+    
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/v1/instances",
             headers=headers,
-            json=json
+            params=params
         )
         response.raise_for_status()
-        return response.json() if response.status_code != 204 else {"status": "success"}
+        
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            "error": str(e),
+            "status_code": e.response.status_code if hasattr(e, 'response') else 500
+        }
 
-# Recursos (GET endpoints)
-@mcp.resource("vm://instances")
-async def list_instances(
-    ctx: Context,
-    limit: int = 50,
-    offset: int = 0,
-    sort: str = "created_at:asc",
-    expand: Optional[List[str]] = None,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Lista todas as instâncias de VM do tenant atual."""
-    params = {"limit": limit, "offset": offset, "sort": sort}
-    if expand:
-        params["expand"] = expand
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("GET", "instances", params=params, headers=headers)
-
-@mcp.resource("vm://images")
-async def list_images(
-    ctx: Context,
-    limit: int = 50,
-    offset: int = 0,
-    sort: str = "platform:asc,end_life_at:desc"
-) -> dict:
-    """Lista todas as imagens disponíveis para o tenant/região atual."""
-    params = {"limit": limit, "offset": offset, "sort": sort}
-    return await make_request("GET", "images", params=params)
-
-@mcp.resource("vm://machine-types")
-async def list_machine_types(
-    ctx: Context,
-    limit: int = 50,
-    offset: int = 0,
-    sort: str = "created_at:asc"
-) -> dict:
-    """Lista todos os tipos de máquina disponíveis."""
-    params = {"limit": limit, "offset": offset, "sort": sort}
-    return await make_request("GET", "machine-types", params=params)
-
-@mcp.resource("vm://snapshots")
-async def list_snapshots(
-    ctx: Context,
-    limit: int = 50,
-    offset: int = 0,
-    sort: str = "created_at:asc",
-    expand: Optional[List[str]] = None,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Lista todos os snapshots do tenant atual."""
-    params = {"limit": limit, "offset": offset, "sort": sort}
-    if expand:
-        params["expand"] = expand
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("GET", "snapshots", params=params, headers=headers)
-
-@mcp.resource("vm://backups")
-async def list_backups(
-    ctx: Context,
-    limit: int = 50,
-    offset: int = 0,
-    sort: str = "created_at:asc",
-    expand: Optional[List[str]] = None,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Lista todos os backups do tenant atual."""
-    params = {"limit": limit, "offset": offset, "sort": sort}
-    if expand:
-        params["expand"] = expand
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("GET", "backups", params=params, headers=headers)
-
-# Ferramentas (ações)
+# Add VM details tool
 @mcp.tool()
-async def create_instance(
-    ctx: Context,
-    body: dict,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Cria uma nova instância de VM."""
-    headers = {"Content-Type": "application/json"}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("POST", "instances", headers=headers, json=body)
-
-@mcp.tool()
-async def delete_instance(
-    ctx: Context,
-    id: str,
-    x_tenant_id: Optional[str] = None,
-    delete_public_ip: bool = False
-) -> dict:
-    """Deleta uma instância de VM pelo id."""
-    params = {"delete_public_ip": delete_public_ip}
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("DELETE", f"instances/{id}", params=params, headers=headers)
-
-@mcp.tool()
-async def start_instance(
-    ctx: Context,
-    id: str,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Inicia uma instância de VM pelo id."""
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("POST", f"instances/{id}/start", headers=headers)
-
-@mcp.tool()
-async def stop_instance(
-    ctx: Context,
-    id: str,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Para uma instância de VM pelo id."""
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("POST", f"instances/{id}/stop", headers=headers)
-
-@mcp.tool()
-async def reboot_instance(
-    ctx: Context,
-    id: str,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Reinicia uma instância de VM pelo id."""
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("POST", f"instances/{id}/reboot", headers=headers)
-
-@mcp.tool()
-async def suspend_instance(
-    ctx: Context,
-    id: str,
-    x_tenant_id: Optional[str] = None
-) -> dict:
-    """Suspende uma instância de VM pelo id."""
-    headers = {}
-    if x_tenant_id:
-        headers["x-tenant-id"] = x_tenant_id
-    return await make_request("POST", f"instances/{id}/suspend", headers=headers)
-
-# Prompt para consultas
-@mcp.prompt()
-def vm_query_prompt(query: str) -> List[base.Message]:
-    """Gera o prompt para consultas de VM."""
-    return [
-        base.UserMessage("Você deseja consultar ou operar máquinas virtuais."),
-        base.UserMessage(f"Consulta: {query}"),
-        base.AssistantMessage(
-            "Use os recursos vm://instances, vm://images, vm://machine-types, "
-            "vm://snapshots, vm://backups ou as ferramentas para criar, deletar, "
-            "iniciar, parar, reiniciar ou suspender VMs."
-        ),
-    ]
+def get_vm(vm_id: str) -> Dict[str, Any]:
+    """
+    Get details of a specific virtual machine.
+    
+    Args:
+        vm_id: ID of the virtual machine to get details for
+    
+    Returns:
+        Dict containing the VM details
+    """
+    headers = {
+        "x-api-key": API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/v1/instances/{vm_id}",
+            headers=headers
+        )
+        response.raise_for_status()
+        
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            "error": str(e),
+            "status_code": e.response.status_code if hasattr(e, 'response') else 500
+        }
 
 if __name__ == "__main__":
-    mcp.run() 
+    mcp.run(transport="stdio")

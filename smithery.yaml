@@ -2,10 +2,17 @@ startCommand:
   type: stdio
   configSchema:
     type: object
-    properties: {}
+    required:
+      - apiKey
+    properties:
+      apiKey:
+        type: string
+        description: API key for VM API authentication
   commandFunction: |
     (config) => ({
       command: 'python',
       args: ['main.py'],
-      env: {}
+      env: {
+        VM_API_KEY: config.apiKey
+      }
     }) 
