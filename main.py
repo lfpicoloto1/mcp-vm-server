@@ -50,11 +50,83 @@ class CreateResponse(BaseModel):
     name: str
 
 # Configuration
-API_BASE_URL = os.getenv("VM_API_URL", "https://api.magalu.cloud/br-ne-1/compute")
+API_BASE_URL = os.getenv("VM_API_URL", "https://api.magalu.cloud/br-se1/compute")
 API_KEY = os.getenv("VM_API_KEY")
 
 if not API_KEY:
     raise ValueError("VM_API_KEY environment variable is required")
+
+# Add machine types listing tool
+@mcp.tool()
+def list_machine_types() -> Dict[str, Any]:
+    """
+    List all available machine types.
+    
+    Returns:
+        Dict containing the list of machine types and pagination info
+    """
+    headers = {
+        "x-api-key": API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    params = {
+        "_offset": 0,
+        "_sort": "created_at:asc",
+        "_limit": 100
+    }
+    
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/v1/machine-types",
+            headers=headers,
+            params=params
+        )
+        response.raise_for_status()
+        
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            "error": str(e),
+            "status_code": e.response.status_code if hasattr(e, 'response') else 500
+        }
+
+# Add images listing tool
+@mcp.tool()
+def list_images() -> Dict[str, Any]:
+    """
+    List all available images.
+    
+    Returns:
+        Dict containing the list of images and pagination info
+    """
+    headers = {
+        "x-api-key": API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    params = {
+        "_offset": 0,
+        "_sort": "platform:asc,end_life_at:desc",
+        "_limit": 100
+    }
+    
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/v1/images",
+            headers=headers,
+            params=params
+        )
+        response.raise_for_status()
+        
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            "error": str(e),
+            "status_code": e.response.status_code if hasattr(e, 'response') else 500
+        }
 
 # Add VM listing tool
 @mcp.tool()
@@ -128,9 +200,9 @@ def get_vm(vm_id: str) -> Dict[str, Any]:
 @mcp.tool()
 def create_vm(
     name: str,
-    machine_type_id: str,
+    machine_type_name: str,
     ssh_key_name: str,
-    image_id: str,
+    image_name: str,
     availability_zone: Optional[str] = None,
     vpc_id: Optional[str] = None,
     user_data: Optional[str] = None
@@ -140,9 +212,9 @@ def create_vm(
     
     Args:
         name: Name of the VM
-        machine_type_id: ID of the machine type
+        machine_type_name: Name of the machine type
         ssh_key_name: Name of the SSH key to use
-        image_id: ID of the image to use
+        image_name: Name of the image to use
         availability_zone: Optional availability zone
         vpc_id: Optional VPC ID
         user_data: Optional user data script (base64 encoded)
@@ -157,9 +229,9 @@ def create_vm(
     
     payload = {
         "name": name,
-        "machine_type": {"id": machine_type_id},
+        "machine_type": {"name": machine_type_name},
         "ssh_key_name": ssh_key_name,
-        "image": {"id": image_id}
+        "image": {"name": image_name}
     }
     
     if availability_zone:
