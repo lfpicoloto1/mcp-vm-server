@@ -7,12 +7,13 @@ startCommand:
     properties:
       apiKey:
         type: string
-        description: API key for VM API authentication
+        description: API key for accessing the VM API
   commandFunction: |
     (config) => ({
       command: 'python',
       args: ['main.py'],
       env: {
-        VM_API_KEY: config.apiKey
+        VM_API_KEY: config.apiKey,
+        VM_API_URL: 'https://api.magalu.cloud/br-ne-1/compute'
       }
     }) 
