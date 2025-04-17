@@ -35,20 +35,9 @@ if not API_KEY:
 
 # Add VM listing tool
 @mcp.tool()
-def list_vms(
-    limit: Optional[int] = 50,
-    offset: Optional[int] = 0,
-    sort: Optional[str] = "created_at:asc",
-    expand: Optional[List[str]] = None
-) -> Dict[str, Any]:
+def list_vms() -> Dict[str, Any]:
     """
     List all virtual machines in the current tenant.
-    
-    Args:
-        limit: Maximum number of results to return (default: 50)
-        offset: Number of results to skip (default: 0)
-        sort: Sort order (default: "created_at:asc")
-        expand: List of fields to expand in the response
     
     Returns:
         Dict containing the list of VMs and pagination info
@@ -59,13 +48,11 @@ def list_vms(
     }
     
     params = {
-        "_limit": limit,
-        "_offset": offset,
-        "_sort": sort
+        "_offset": 0,
+        "_sort": "created_at:desc",
+        "_limit": 100
+
     }
-    
-    if expand:
-        params["expand"] = expand
     
     try:
         response = requests.get(
