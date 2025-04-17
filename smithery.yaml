@@ -14,6 +14,6 @@ startCommand:
       args: ['main.py'],
       env: {
         VM_API_KEY: config.apiKey,
-        VM_API_URL: 'https://api.magalu.cloud/br-ne-1/compute'
+        VM_API_URL: 'https://api.magalu.cloud/br-se1/compute'
       }
     }) 

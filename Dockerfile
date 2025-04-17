@@ -35,7 +35,6 @@ USER appuser
 
 # Set environment variables
 ENV VM_API_URL="https://api.magalu.cloud/br-ne-1/compute"
-ENV VM_API_KEY=""
 
 # Expose port if needed (though we're using stdio transport)
 EXPOSE 8000
