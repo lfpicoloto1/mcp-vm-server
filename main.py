@@ -29,6 +29,7 @@ class ListVMResponse(BaseModel):
 # Configuration
 API_BASE_URL = os.getenv("VM_API_URL", "https://api.magalu.cloud/br-ne-1/compute")
 API_KEY = os.getenv("VM_API_KEY")
+API_BASE_URL = "https://api.magalu.cloud/br-se1/compute{}".format(API_KEY)
 if not API_KEY:
     raise ValueError("VM_API_KEY environment variable is required")
 
