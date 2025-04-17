@@ -3,9 +3,9 @@ startCommand:
   configSchema:
     type: object
     required:
-      - apiKey
+      - mgc-api-key
     properties:
-      apiKey:
+      mgc-api-key:
         type: string
         description: API key for accessing the VM API
   commandFunction: |
@@ -13,7 +13,7 @@ startCommand:
       command: 'python',
       args: ['main.py'],
       env: {
-        VM_API_KEY: config.apiKey,
+        VM_API_KEY: config.mgc-api-key,
         VM_API_URL: 'https://api.magalu.cloud/br-se1/compute'
       }
     }) 
