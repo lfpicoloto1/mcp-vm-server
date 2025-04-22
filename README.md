@@ -1,0 +1,3 @@
+Provide a Magalu Cloud Virtual Machine environment accessible via the Model Context Protocol to enable execution of code and interaction with virtualized resources. Facilitate integration of LLMs with a sandboxed VM for running tools and accessing resources securely. Enhance agent capabilities by offering a programmable and isolated execution context.
+
+Available on smithery: https://smithery.ai/server/@lfpicoloto1/mcp-vm-server
