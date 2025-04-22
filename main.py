@@ -262,5 +262,40 @@ def create_vm(
             "status_code": e.response.status_code if hasattr(e, 'response') else 500
         }
 
+@mcp.tool()
+def delete_vm(vm_id: str) -> Dict[str, Any]:
+    """
+    Delete a virtual machine.
+    
+    Args:
+        vm_id: ID of the virtual machine to delete
+    
+    Returns:
+        Dict containing the deletion response
+    """
+    headers = {
+        "x-api-key": API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.delete(
+            f"{API_BASE_URL}/v1/instances/{vm_id}",
+            headers=headers
+        )
+        response.raise_for_status()
+        
+        # For successful deletion, return empty dict as per typical DELETE endpoints
+        if response.status_code == 204:
+            return {"message": "VM deleted successfully"}
+            
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            "error": str(e),
+            "status_code": e.response.status_code if hasattr(e, 'response') else 500
+        }
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
